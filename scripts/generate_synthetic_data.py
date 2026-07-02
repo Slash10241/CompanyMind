@@ -7,6 +7,7 @@ Saves as both .txt and PDF (via reportlab).
 import os
 import sys
 import json
+import time
 from pathlib import Path
 from dotenv import load_dotenv
 
@@ -636,14 +637,25 @@ def text_to_pdf(text: str, output_path: Path, title: str):
 
 def generate_document(doc_spec: dict) -> str:
     print(f"  Generating: {doc_spec['filename']}...")
-    response = _gen_model.generate_content(
-        doc_spec["prompt"],
-        generation_config=genai.types.GenerationConfig(
-            temperature=0.3,
-            max_output_tokens=2000,
-        ),
-    )
-    return response.text
+    attempt = 0
+    while True:
+        try:
+            response = _gen_model.generate_content(
+                doc_spec["prompt"],
+                generation_config=genai.types.GenerationConfig(
+                    temperature=0.3,
+                    max_output_tokens=2000,
+                ),
+            )
+            return response.text
+        except Exception as e:
+            err = str(e)
+            if "429" in err or "RESOURCE_EXHAUSTED" in err or "quota" in err.lower() or "rate" in err.lower():
+                attempt += 1
+                print(f"    Rate limit hit (attempt {attempt}), retrying in 10s...")
+                time.sleep(10)
+            else:
+                raise
 
 
 def main():
