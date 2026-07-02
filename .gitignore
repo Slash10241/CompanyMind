@@ -1,0 +1,34 @@
+# Environment
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+env/
+
+# Data (large files & generated)
+backend/data/chroma/
+backend/data/uploads/
+backend/data/documents.json
+backend/data/knowledge_graph.json
+backend/data/CompanyDocuments/
+backend/data/synthetic/
+
+# Node
+frontend/node_modules/
+frontend/dist/
+
+# macOS
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
