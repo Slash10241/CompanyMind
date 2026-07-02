@@ -29,6 +29,7 @@ frontend/dist/
 # macOS
 .DS_Store
 
-# IDE
+# IDE & tooling
 .vscode/
 .idea/
+.claude/
