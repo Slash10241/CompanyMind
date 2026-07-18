@@ -7,14 +7,14 @@
     font-family: 'Inter', system-ui, sans-serif;
   }
   body {
-    @apply bg-slate-950 text-slate-100;
+    @apply bg-rm-cream text-rm-text;
   }
 }
 
 @layer components {
   .scrollbar-thin {
     scrollbar-width: thin;
-    scrollbar-color: #334155 transparent;
+    scrollbar-color: #D1D5DB transparent;
   }
   .scrollbar-thin::-webkit-scrollbar {
     width: 4px;
@@ -23,12 +23,11 @@
     background: transparent;
   }
   .scrollbar-thin::-webkit-scrollbar-thumb {
-    background-color: #334155;
+    background-color: #D1D5DB;
     border-radius: 2px;
   }
 }
 
-/* SSE streaming cursor blink */
 @keyframes blink {
   0%, 100% { opacity: 1; }
   50% { opacity: 0; }

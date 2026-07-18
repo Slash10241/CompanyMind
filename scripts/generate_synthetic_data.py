@@ -27,8 +27,15 @@ from reportlab.lib import colors
 OUTPUT_DIR = Path("backend/data/synthetic")
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
-genai.configure(api_key=os.environ["GEMINI_API_KEY"])
-_gen_model = genai.GenerativeModel("gemini-2.5-flash")
+_API_KEYS = [v for k, v in os.environ.items() if k.startswith("GEMINI_API_KEY") and v]
+if not _API_KEYS:
+    raise RuntimeError("No GEMINI_API_KEY* found in environment")
+_key_idx = 0
+
+
+def _get_model() -> genai.GenerativeModel:
+    genai.configure(api_key=_API_KEYS[_key_idx % len(_API_KEYS)])
+    return genai.GenerativeModel("gemini-2.5-flash")
 
 DOCUMENTS = [
     # Work Orders
@@ -636,11 +643,13 @@ def text_to_pdf(text: str, output_path: Path, title: str):
 
 
 def generate_document(doc_spec: dict) -> str:
+    global _key_idx
     print(f"  Generating: {doc_spec['filename']}...")
     attempt = 0
     while True:
         try:
-            response = _gen_model.generate_content(
+            model = _get_model()
+            response = model.generate_content(
                 doc_spec["prompt"],
                 generation_config=genai.types.GenerationConfig(
                     temperature=0.3,
@@ -652,8 +661,13 @@ def generate_document(doc_spec: dict) -> str:
             err = str(e)
             if "429" in err or "RESOURCE_EXHAUSTED" in err or "quota" in err.lower() or "rate" in err.lower():
                 attempt += 1
-                print(f"    Rate limit hit (attempt {attempt}), retrying in 10s...")
-                time.sleep(10)
+                next_key = (_key_idx + 1) % len(_API_KEYS)
+                if next_key != _key_idx % len(_API_KEYS):
+                    _key_idx += 1
+                    print(f"    Rate limit hit, switching to key {(_key_idx % len(_API_KEYS)) + 1}…")
+                else:
+                    print(f"    Rate limit hit (attempt {attempt}), retrying in 10s...")
+                    time.sleep(10)
             else:
                 raise
 

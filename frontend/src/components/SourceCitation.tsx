@@ -7,13 +7,13 @@ interface Props {
 }
 
 const DOC_TYPE_COLORS: Record<string, string> = {
-  'Work Order': 'bg-blue-500/20 text-blue-300',
-  'Inspection Report': 'bg-purple-500/20 text-purple-300',
-  'Safety Procedure': 'bg-red-500/20 text-red-300',
-  'Equipment Data Sheet': 'bg-cyan-500/20 text-cyan-300',
-  'Incident Report': 'bg-orange-500/20 text-orange-300',
-  'Operating Procedure': 'bg-green-500/20 text-green-300',
-  'General Document': 'bg-slate-500/20 text-slate-300',
+  'Work Order':          'bg-blue-50 text-blue-700 border-blue-200',
+  'Inspection Report':   'bg-purple-50 text-purple-700 border-purple-200',
+  'Safety Procedure':    'bg-red-50 text-red-700 border-red-200',
+  'Equipment Data Sheet':'bg-cyan-50 text-cyan-700 border-cyan-200',
+  'Incident Report':     'bg-orange-50 text-orange-700 border-orange-200',
+  'Operating Procedure': 'bg-emerald-50 text-emerald-700 border-emerald-200',
+  'General Document':    'bg-rm-gray-ultra text-rm-gray border-rm-gray-light',
 }
 
 export function SourceCitations({ citations }: Props) {
@@ -22,10 +22,10 @@ export function SourceCitations({ citations }: Props) {
   if (!citations.length) return null
 
   return (
-    <div className="mt-2">
+    <div className="mt-1.5">
       <button
         onClick={() => setOpen(o => !o)}
-        className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-slate-200 transition-colors"
+        className="flex items-center gap-1.5 text-xs text-rm-gray hover:text-rm-navy transition-colors"
       >
         <FileText size={12} />
         <span>{citations.length} source{citations.length > 1 ? 's' : ''}</span>
@@ -35,35 +35,37 @@ export function SourceCitations({ citations }: Props) {
       {open && (
         <div className="mt-2 space-y-2">
           {citations.map((c, i) => {
-            const colorClass = DOC_TYPE_COLORS[c.doc_name] ??
-              (Object.entries(DOC_TYPE_COLORS).find(([k]) => c.doc_name.toLowerCase().includes(k.toLowerCase()))?.[1] ??
-              'bg-slate-500/20 text-slate-300')
+            const colorClass =
+              DOC_TYPE_COLORS[c.doc_name] ??
+              (Object.entries(DOC_TYPE_COLORS).find(([k]) =>
+                c.doc_name.toLowerCase().includes(k.toLowerCase())
+              )?.[1] ?? DOC_TYPE_COLORS['General Document'])
             return (
-              <div key={i} className="rounded-lg border border-slate-700/50 bg-slate-800/50 p-3">
+              <div key={i} className="rounded-xl border border-rm-gray-light bg-white p-3 shadow-sm">
                 <div className="flex items-start justify-between gap-2 mb-1.5">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${colorClass}`}>
+                    <span className={`text-xs px-1.5 py-0.5 rounded border font-medium ${colorClass}`}>
                       p.{c.page_number}
                     </span>
-                    <span className="text-xs text-slate-300 font-medium truncate max-w-[200px]">
+                    <span className="text-xs text-rm-text font-medium truncate max-w-[200px]">
                       {c.doc_name.replace(/_/g, ' ')}
                     </span>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
-                    <span className="text-xs text-slate-500">
+                    <span className="text-xs text-rm-gray">
                       {Math.round(c.relevance_score * 100)}% match
                     </span>
                     <a
                       href={`/api/documents/${c.doc_id}/download`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-slate-500 hover:text-slate-300 transition-colors"
+                      className="text-rm-gray hover:text-rm-navy transition-colors"
                     >
                       <ExternalLink size={11} />
                     </a>
                   </div>
                 </div>
-                <p className="text-xs text-slate-400 leading-relaxed line-clamp-3">
+                <p className="text-xs text-rm-gray leading-relaxed line-clamp-3">
                   {c.snippet}
                 </p>
               </div>

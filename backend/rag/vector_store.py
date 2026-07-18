@@ -86,5 +86,28 @@ def get_chunks_by_doc_id(doc_id: str) -> list[dict]:
     return chunks
 
 
+def get_by_doc_type(doc_type: str, limit: int = 200) -> list[dict]:
+    """Return chunks filtered by exact doc_type value."""
+    collection = _get_collection()
+    if collection.count() == 0:
+        return []
+    results = collection.get(
+        where={"doc_type": doc_type},
+        limit=limit,
+        include=["documents", "metadatas"],
+    )
+    chunks = []
+    for doc, meta in zip(results.get("documents", []), results.get("metadatas", [])):
+        chunks.append({
+            "text": doc,
+            "doc_id": meta.get("doc_id", ""),
+            "doc_name": meta.get("doc_name", ""),
+            "doc_type": meta.get("doc_type", ""),
+            "page_number": int(meta.get("page_number", 1)),
+            "score": 0.75,
+        })
+    return chunks
+
+
 def get_total_chunks() -> int:
     return _get_collection().count()

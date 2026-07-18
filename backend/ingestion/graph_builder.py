@@ -139,7 +139,7 @@ def load_graph():
         for node in data["nodes"]:
             if isinstance(node.get("docs"), list):
                 node["docs"] = set(node["docs"])
-        _graph = nx.node_link_graph(data)
+        _graph = nx.node_link_graph(data, edges="links")
     else:
         _graph = nx.DiGraph()
 

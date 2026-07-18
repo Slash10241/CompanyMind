@@ -2,31 +2,30 @@ import json
 from fastapi import APIRouter
 from fastapi.responses import StreamingResponse
 from backend.models.schemas import ChatRequest
-from backend.rag.copilot import stream_answer, answer_with_metadata
+from backend.rag.copilot import needs_rag, stream_direct, stream_answer, answer_with_metadata
 from backend.rag.retriever import retrieve, build_citations
 
 router = APIRouter()
 
 
 async def _event_stream(query: str, history: list[dict]):
-    # First, compute citations and confidence (fast retrieval)
-    chunks, confidence = retrieve(query, top_k=8)
-    citations = build_citations(chunks)
+    # ── Step 1: decide whether RAG is needed ──────────────────────────────────
+    rag_required = needs_rag(query, history)
+    yield f"data: {json.dumps({'type': 'rag_decision', 'needs_rag': int(rag_required)})}\n\n"
 
-    # Send metadata event first
-    meta_event = {
-        "type": "metadata",
-        "confidence": confidence,
-        "citations": [c.model_dump() for c in citations],
-    }
-    yield f"data: {json.dumps(meta_event)}\n\n"
+    if not rag_required:
+        # ── Step 2a: direct conversational reply (no retrieval) ───────────────
+        yield f"data: {json.dumps({'type': 'metadata', 'confidence': None, 'citations': []})}\n\n"
+        for token in stream_direct(query, history):
+            yield f"data: {json.dumps({'type': 'token', 'text': token})}\n\n"
+    else:
+        # ── Step 2b: retrieve → cite → stream RAG answer ──────────────────────
+        chunks, confidence = retrieve(query, top_k=8)
+        citations = build_citations(chunks)
+        yield f"data: {json.dumps({'type': 'metadata', 'confidence': confidence, 'citations': [c.model_dump() for c in citations]})}\n\n"
+        for token in stream_answer(query, history, chunks=chunks):
+            yield f"data: {json.dumps({'type': 'token', 'text': token})}\n\n"
 
-    # Stream answer tokens
-    for token in stream_answer(query, history):
-        event = {"type": "token", "text": token}
-        yield f"data: {json.dumps(event)}\n\n"
-
-    # Send done signal
     yield f"data: {json.dumps({'type': 'done'})}\n\n"
 
 

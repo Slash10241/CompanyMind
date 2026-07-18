@@ -4,13 +4,18 @@ export default {
   theme: {
     extend: {
       colors: {
-        industrial: {
-          50: '#f0f4ff',
-          100: '#dbe4ff',
-          500: '#3b5bdb',
-          600: '#2f4ac0',
-          700: '#2241a8',
-          900: '#1a2e6e',
+        rm: {
+          white:  '#FFFFFF',
+          cream:  '#F8F8F6',
+          gold:   '#F7B731',
+          'gold-dark': '#D9A020',
+          navy:   '#00529F',
+          'navy-dark': '#003D7A',
+          'navy-light': '#E8F0FA',
+          gray:   '#6B7280',
+          'gray-light': '#E5E7EB',
+          'gray-ultra': '#F3F4F6',
+          text:   '#1A2744',
         },
       },
     },

@@ -112,6 +112,57 @@ async def ingest_file(file_path: str, original_name: str) -> IngestionResult:
     )
 
 
+def rebuild_graph_from_registry():
+    """
+    Generator: re-extract entities from all registered docs and rebuild the graph.
+    Yields progress dicts. Call this when the graph is empty after ingestion.
+    """
+    import networkx as nx
+    graph_builder._graph = nx.DiGraph()  # wipe existing
+
+    registry = _load_registry()
+    docs = list(registry.values())
+    total = len(docs)
+    errors = 0
+
+    for i, doc_meta in enumerate(docs):
+        file_path = doc_meta.get("file_path", "")
+        doc_id = doc_meta["id"]
+        doc_name = doc_meta["name"]
+
+        if not Path(file_path).exists():
+            errors += 1
+            yield {"processed": i + 1, "total": total, "doc": doc_name, "skipped": True, "errors": errors}
+            continue
+
+        try:
+            chunks = parse_document(file_path, settings.chunk_size, settings.chunk_overlap)
+            all_entities = []
+            for chunk in chunks:
+                entities = extract_entities(chunk["text"])
+                all_entities.extend(entities)
+                graph_builder.add_entities_from_chunk(entities, doc_id, doc_name)
+
+            # Update entity_count in registry
+            registry[doc_id]["entity_count"] = len(set(e.text for e in all_entities))
+        except Exception as exc:
+            errors += 1
+            yield {"processed": i + 1, "total": total, "doc": doc_name, "error": str(exc)[:100], "errors": errors}
+            continue
+
+        yield {
+            "processed": i + 1,
+            "total": total,
+            "doc": doc_name,
+            "nodes": graph_builder.get_node_count(),
+            "edges": graph_builder.get_edge_count(),
+            "errors": errors,
+        }
+
+    graph_builder.save_graph()
+    _save_registry(registry)
+
+
 def list_documents() -> list[DocumentMetadata]:
     registry = _load_registry()
     return [DocumentMetadata(**v) for v in registry.values()]

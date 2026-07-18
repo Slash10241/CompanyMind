@@ -1,15 +1,12 @@
-interface Props {
-  score: number
-}
+interface Props { score: number }
 
 export function ConfidenceBadge({ score }: Props) {
   const pct = Math.round(score * 100)
   const color =
-    score >= 0.8 ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' :
-    score >= 0.5 ? 'bg-amber-500/20 text-amber-300 border-amber-500/30' :
-                   'bg-red-500/20 text-red-300 border-red-500/30'
-  const label =
-    score >= 0.8 ? 'High' : score >= 0.5 ? 'Medium' : 'Low'
+    score >= 0.8 ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+    score >= 0.5 ? 'bg-amber-50 text-amber-700 border-amber-200' :
+                   'bg-red-50 text-red-700 border-red-200'
+  const label = score >= 0.8 ? 'High' : score >= 0.5 ? 'Medium' : 'Low'
 
   return (
     <span

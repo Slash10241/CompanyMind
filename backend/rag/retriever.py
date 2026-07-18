@@ -7,6 +7,36 @@ from backend.models.schemas import SourceCitation
 _EQUIP_PATTERN = re.compile(r'\b([A-Z]-\d{3}[A-Z]?)\b', re.IGNORECASE)
 _REG_PATTERN = re.compile(r'\b(OISD|PESO|ISO|API|BIS|Factory Act|OHSAS)\b', re.IGNORECASE)
 
+# Listing / aggregation query detection
+_LISTING_TRIGGER = re.compile(
+    r'\b(list|all|every|each|enumerate|show|summarize|how many|what are'
+    r'|highest|lowest|most|least|maximum|minimum|max|min'
+    r'|expensive|cheapest|largest|smallest|biggest'
+    r'|total|average|count|top|worst|best)\b', re.I
+)
+_DOC_TYPE_MAP: list[tuple[re.Pattern, str]] = [
+    (re.compile(r'invoice', re.I),                       'Invoice'),
+    (re.compile(r'work.?order', re.I),                   'Work Order'),
+    (re.compile(r'inspection', re.I),                    'Inspection Report'),
+    (re.compile(r'safety|sop\b', re.I),                  'Safety Procedure'),
+    (re.compile(r'equipment.?data|data.?sheet', re.I),   'Equipment Data Sheet'),
+    (re.compile(r'incident|near.?miss', re.I),           'Incident Report'),
+    (re.compile(r'operating.?proc', re.I),               'Operating Procedure'),
+    (re.compile(r'purchase.?order', re.I),               'Purchase Order'),
+    (re.compile(r'shipping|shipment', re.I),             'Shipping Order'),
+    (re.compile(r'stock.?report|inventory', re.I),       'Inventory Report'),
+]
+
+
+def _detect_list_doc_type(query: str) -> str | None:
+    """Return the target doc_type if this is a 'list all X' style query, else None."""
+    if not _LISTING_TRIGGER.search(query):
+        return None
+    for pattern, doc_type in _DOC_TYPE_MAP:
+        if pattern.search(query):
+            return doc_type
+    return None
+
 
 def _extract_query_entities(query: str) -> list[str]:
     entities = []
@@ -18,8 +48,23 @@ def _extract_query_entities(query: str) -> list[str]:
 def retrieve(query: str, top_k: int = 8) -> tuple[list[dict], float]:
     """
     Hybrid retrieval: vector similarity + knowledge graph neighbor expansion.
+    For 'list all X' queries, uses a doc_type filter to return one chunk per document.
     Returns (ranked_chunks, confidence_score).
     """
+    # --- Listing query: fetch all docs of the target type ---
+    list_doc_type = _detect_list_doc_type(query)
+    if list_doc_type:
+        all_chunks = vector_store.get_by_doc_type(list_doc_type, limit=300)
+        # Keep one chunk per document (prefer page 1 as it usually has summary/totals)
+        best: dict[str, dict] = {}
+        for c in all_chunks:
+            doc_id = c["doc_id"]
+            if doc_id not in best or c["page_number"] < best[doc_id]["page_number"]:
+                best[doc_id] = c
+        merged = list(best.values())[:50]  # cap context at 50 docs
+        return merged, _compute_confidence(merged)
+
+    # --- Normal hybrid retrieval ---
     # 1. Vector search
     vector_results = vector_store.query(query, n_results=top_k)
 

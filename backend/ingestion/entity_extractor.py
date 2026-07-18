@@ -2,18 +2,8 @@ from __future__ import annotations
 import json
 import google.generativeai as genai
 from backend.config import settings
+from backend.gemini_keys import call_with_fallback
 from backend.models.schemas import Entity
-
-_model = None
-
-
-def _get_model():
-    global _model
-    if _model is None:
-        genai.configure(api_key=settings.gemini_api_key)
-        _model = genai.GenerativeModel(settings.extraction_model)
-    return _model
-
 
 EXTRACTION_PROMPT = """You are a document entity extractor for an industrial and business knowledge platform. Extract all named entities from the text below.
 
@@ -37,19 +27,21 @@ Text:
 
 
 def extract_entities(text: str) -> list[Entity]:
-    """Extract entities from a text chunk using Gemini Flash."""
+    """Extract entities from a text chunk using Gemini Flash with key fallback."""
     if len(text.strip()) < 20:
         return []
 
-    model = _get_model()
-    try:
-        response = model.generate_content(
+    def fn(model: genai.GenerativeModel):
+        return model.generate_content(
             EXTRACTION_PROMPT.format(text=text[:3000]),
             generation_config=genai.types.GenerationConfig(
                 temperature=0.1,
                 max_output_tokens=1024,
             ),
         )
+
+    try:
+        response = call_with_fallback(settings.extraction_model, fn)
         raw = response.text.strip()
         if raw.startswith("```"):
             raw = raw.split("```")[1]

@@ -93,9 +93,10 @@ export function streamChat(
   query: string,
   history: ChatMessage[],
   onToken: (text: string) => void,
-  onMeta: (confidence: number, citations: SourceCitation[]) => void,
+  onMeta: (confidence: number | null, citations: SourceCitation[]) => void,
   onDone: () => void,
   onError: (err: string) => void,
+  onRagDecision?: (needsRag: boolean) => void,
 ) {
   fetch(`${BASE}/chat/stream`, {
     method: 'POST',
@@ -121,7 +122,9 @@ export function streamChat(
         if (!line.startsWith('data: ')) continue
         try {
           const event = JSON.parse(line.slice(6))
-          if (event.type === 'metadata') {
+          if (event.type === 'rag_decision') {
+            onRagDecision?.(event.needs_rag === 1)
+          } else if (event.type === 'metadata') {
             onMeta(event.confidence, event.citations)
           } else if (event.type === 'token') {
             onToken(event.text)

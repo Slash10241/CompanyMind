@@ -54,34 +54,34 @@ export function DocumentUpload({ onComplete }: Props) {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {/* Drop zone */}
       <div
         {...getRootProps()}
-        className={`border-2 border-dashed rounded-2xl p-8 text-center cursor-pointer transition-all ${
+        className={`border-2 border-dashed rounded-xl p-5 text-center cursor-pointer transition-all ${
           isDragActive
-            ? 'border-industrial-500 bg-industrial-900/20'
-            : 'border-slate-700 hover:border-slate-600 bg-slate-800/30'
+            ? 'border-rm-gold bg-amber-50'
+            : 'border-rm-gray-light hover:border-rm-navy bg-rm-gray-ultra'
         }`}
       >
         <input {...getInputProps()} />
-        <Upload size={32} className="mx-auto mb-3 text-slate-500" />
-        <p className="text-sm text-slate-300 font-medium">
-          {isDragActive ? 'Drop files here' : 'Drag & drop industrial documents'}
+        <Upload size={24} className={`mx-auto mb-2 ${isDragActive ? 'text-rm-gold' : 'text-rm-gray'}`} />
+        <p className="text-sm text-rm-text font-medium">
+          {isDragActive ? 'Drop files here' : 'Drag & drop documents'}
         </p>
-        <p className="text-xs text-slate-500 mt-1">PDF, TXT, CSV, MD — up to 50 MB each</p>
+        <p className="text-xs text-rm-gray mt-0.5">PDF, TXT, CSV, MD</p>
       </div>
 
       {/* Selected files */}
       {files.length > 0 && (
-        <div className="space-y-2">
+        <div className="space-y-1.5">
           {files.map(f => (
-            <div key={f.name} className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-slate-800/60 border border-slate-700/50">
-              <FileText size={16} className="text-slate-400 shrink-0" />
-              <span className="text-sm text-slate-300 truncate flex-1">{f.name}</span>
-              <span className="text-xs text-slate-500 shrink-0">{(f.size / 1024).toFixed(0)} KB</span>
-              <button onClick={() => removeFile(f.name)} className="text-slate-600 hover:text-slate-400">
-                <X size={14} />
+            <div key={f.name} className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white border border-rm-gray-light">
+              <FileText size={14} className="text-rm-gray shrink-0" />
+              <span className="text-xs text-rm-text truncate flex-1">{f.name}</span>
+              <span className="text-xs text-rm-gray shrink-0">{(f.size / 1024).toFixed(0)} KB</span>
+              <button onClick={() => removeFile(f.name)} className="text-rm-gray hover:text-rm-text transition-colors">
+                <X size={13} />
               </button>
             </div>
           ))}
@@ -89,12 +89,12 @@ export function DocumentUpload({ onComplete }: Props) {
           <button
             onClick={handleUpload}
             disabled={uploading}
-            className="w-full py-2.5 rounded-xl bg-industrial-600 hover:bg-industrial-500 disabled:bg-slate-700 text-white text-sm font-medium flex items-center justify-center gap-2 transition-colors"
+            className="w-full py-2 rounded-xl bg-rm-navy hover:bg-rm-navy-dark disabled:bg-rm-gray-light disabled:cursor-not-allowed text-white text-sm font-medium flex items-center justify-center gap-2 transition-colors"
           >
             {uploading ? (
-              <><Loader2 size={16} className="animate-spin" /> Ingesting & building knowledge graph...</>
+              <><Loader2 size={14} className="animate-spin" /> Building knowledge graph...</>
             ) : (
-              <><Upload size={16} /> Ingest {files.length} document{files.length > 1 ? 's' : ''}</>
+              <><Upload size={14} /> Ingest {files.length} document{files.length > 1 ? 's' : ''}</>
             )}
           </button>
         </div>
@@ -102,23 +102,23 @@ export function DocumentUpload({ onComplete }: Props) {
 
       {/* Error */}
       {error && (
-        <div className="flex gap-2 p-3 rounded-xl bg-red-900/20 border border-red-800/50 text-red-300 text-sm">
-          <AlertCircle size={16} className="shrink-0 mt-0.5" />
+        <div className="flex gap-2 p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs">
+          <AlertCircle size={14} className="shrink-0 mt-0.5" />
           <span>{error}</span>
         </div>
       )}
 
       {/* Results */}
       {results.length > 0 && (
-        <div className="space-y-2">
-          <p className="text-xs text-slate-400 font-medium uppercase tracking-wider">Ingestion Results</p>
+        <div className="space-y-1.5">
+          <p className="text-xs text-rm-gray font-semibold uppercase tracking-wider">Ingestion Results</p>
           {results.map(r => (
-            <div key={r.doc_id} className="flex items-start gap-3 p-3 rounded-xl bg-emerald-900/20 border border-emerald-800/30">
-              <CheckCircle size={16} className="text-emerald-400 shrink-0 mt-0.5" />
+            <div key={r.doc_id} className="flex items-start gap-2 p-2.5 rounded-xl bg-emerald-50 border border-emerald-200">
+              <CheckCircle size={14} className="text-emerald-600 shrink-0 mt-0.5" />
               <div className="flex-1 min-w-0">
-                <p className="text-sm text-slate-200 truncate font-medium">{r.doc_name}</p>
-                <p className="text-xs text-slate-400 mt-0.5">
-                  {r.chunk_count} chunks · {r.entity_count} entities · +{r.graph_nodes_added} graph nodes · +{r.graph_edges_added} edges
+                <p className="text-xs text-rm-text truncate font-medium">{r.doc_name}</p>
+                <p className="text-xs text-rm-gray mt-0.5">
+                  {r.chunk_count} chunks · {r.entity_count} entities · +{r.graph_nodes_added} nodes
                 </p>
               </div>
             </div>
