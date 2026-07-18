@@ -1,6 +1,6 @@
-# CompanyMind — Industrial Knowledge Intelligence Platform
+# CompanyMind — Knowledge Intelligence Platform
 
-An AI-powered knowledge platform that ingests heterogeneous business and industrial documents, builds a unified knowledge graph, and makes their collective intelligence queryable through a conversational copilot.
+An AI-powered platform that ingests heterogeneous business and industrial documents and makes their collective intelligence queryable through a conversational copilot with source citations and confidence scoring.
 
 Built for the **Unstop Hackathon — Theme 8: AI for Industrial Knowledge Intelligence**.
 
@@ -8,11 +8,14 @@ Built for the **Unstop Hackathon — Theme 8: AI for Industrial Knowledge Intell
 
 ## Features
 
-- **Document Ingestion Pipeline** — Upload PDFs, TXT, CSV files; extracts entities (equipment tags, personnel, orders, products, regulations, dates) and builds a knowledge graph automatically
-- **Expert Knowledge Copilot** — RAG-powered chat with streaming responses, source citations, confidence scores, and direct document links
-- **Knowledge Graph Visualiser** — Interactive force-directed graph showing relationships across all ingested documents (10 entity types)
-- **Mobile-responsive UI** — Designed for field technicians on phones as well as desktop engineers
-- **Hybrid Retrieval** — Vector similarity search (ChromaDB) + knowledge graph traversal for richer, cross-document answers
+- **2-Step RAG Routing** — Before every query the agent decides whether knowledge-base retrieval is needed. Greetings and general questions get a direct conversational reply; document queries trigger full hybrid retrieval. Each response is labelled **"KB searched"** or **"Direct reply"**.
+- **Hybrid RAG Retrieval** — Vector similarity search (ChromaDB) combined with knowledge-graph neighbour expansion (NetworkX) for richer, cross-document answers.
+- **Smart Listing Query Detection** — Queries containing `list / all / highest / maximum / cheapest` etc. bypass the default top-8 limit and retrieve all documents of the matched type (up to 50), enabling complete answers like "list all invoices".
+- **Streaming AI Chat** — Token-by-token SSE streaming with confidence badge and collapsible source citations on every RAG answer.
+- **3-Key Gemini Failover** — Automatically rotates through up to three API keys on 429/quota errors. Streaming rotation only triggers before the first token so partial responses are never corrupted.
+- **Universal Document Ingestion** — Upload PDFs, TXT, CSV, or Markdown. Doc type is inferred from the filename (Invoice, Work Order, Inventory Report, Purchase Order, etc.).
+- **Entity Extraction** — 10 entity types extracted by Gemini at ingest time: `EQUIPMENT_TAG`, `PERSON`, `DATE`, `REGULATION`, `PARAMETER`, `LOCATION`, `FAILURE_MODE`, `ORDER_ID`, `PRODUCT`, `ORGANISATION`.
+- **Mobile-responsive UI** — Desktop sidebar + mobile bottom-nav, built with React 18 + Tailwind CSS.
 
 ---
 
@@ -21,46 +24,68 @@ Built for the **Unstop Hackathon — Theme 8: AI for Industrial Knowledge Intell
 | Layer | Technology |
 |---|---|
 | Backend | Python 3.11+, FastAPI, Uvicorn |
-| AI / LLM | Google Gemini 2.5 Flash |
-| Vector Store | ChromaDB |
-| Embeddings | sentence-transformers (all-MiniLM-L6-v2) |
-| Knowledge Graph | NetworkX |
-| PDF Parsing | PyMuPDF |
-| Frontend | React 18, Vite, Tailwind CSS |
-| Graph Viz | react-force-graph-2d |
+| AI / LLM | Google Gemini 2.5 Flash (chat, routing, entity extraction) |
+| Embeddings | sentence-transformers `all-MiniLM-L6-v2` (local, no API cost) |
+| Vector Store | ChromaDB (persistent, cosine HNSW index) |
+| Knowledge Graph | NetworkX DiGraph (co-occurrence edges) |
+| PDF Parsing | PyMuPDF (fitz) |
+| Settings | pydantic-settings |
+| Frontend | React 18, TypeScript, Vite |
+| Styling | Tailwind CSS (custom navy/gold theme) |
+
+---
+
+## How the 2-Step Chat Works
+
+```
+User message
+     │
+     ▼
+Step 1 ── Router (Gemini, temp=0) ──► 0 (no RAG) ──► Direct conversational reply
+                                  └─► 1 (RAG)    ──► ChromaDB retrieval
+                                                       + Graph expansion
+                                                       + Gemini synthesis
+                                                       + Citations & confidence
+```
+
+**SSE event sequence:**
+
+```
+data: {"type": "rag_decision", "needs_rag": 0|1}
+data: {"type": "metadata",     "confidence": 0.87|null, "citations": [...]}
+data: {"type": "token",        "text": "Hello..."}
+...
+data: {"type": "done"}
+```
 
 ---
 
 ## Dataset
 
-This project uses the **Company Documents Dataset** from Kaggle (invoices, shipping orders, purchase orders, and inventory reports in PDF format).
+This project uses the **Company Documents Dataset** from Kaggle.
 
-**Download:** [https://www.kaggle.com/datasets/navodpeiris/company-documents-dataset](https://www.kaggle.com/datasets/navodpeiris/company-documents-dataset)
+**Download:** [kaggle.com/datasets/navodpeiris/company-documents-dataset](https://www.kaggle.com/datasets/navodpeiris/company-documents-dataset)
 
-After downloading, extract and place the folder at:
+| Category | Files | Content |
+|---|---|---|
+| Inventory Report | ~207 | Monthly stock snapshots |
+| Invoice | ~830 | Customer billing records |
+| Shipping Order | ~809 | Freight/delivery orders |
+| Purchase Order | ~830 | Supplier procurement docs |
 
-```
-backend/data/CompanyDocuments/
-├── invoices/                    # ~830 PDF invoices
-├── shipping_orders/             # ~809 PDF shipping orders
-├── purchase_orders/             # ~830 PDF purchase orders
-├── inventory_monthly/           # ~23 monthly stock reports
-└── inventory_monthly_category/  # ~184 category-level stock reports
-```
-
-> The dataset is excluded from this repository via `.gitignore`. You must download it separately.
+After downloading, extract to `backend/data/CompanyDocuments/`. The dataset is gitignored — download separately.
 
 ---
 
-## Setup & Installation
+## Setup
 
 ### Prerequisites
 
 - Python 3.11+
 - Node.js 18+
-- A [Google AI Studio](https://aistudio.google.com/) API key (free tier works)
+- At least one [Google AI Studio](https://aistudio.google.com/) API key (free tier works)
 
-### 1. Clone the repository
+### 1. Clone
 
 ```bash
 git clone https://github.com/Slash10241/CompanyMind.git
@@ -73,42 +98,29 @@ cd CompanyMind
 cp .env.example .env
 ```
 
-Edit `.env` and add your Gemini API key:
+Edit `.env`:
 
-```
-GEMINI_API_KEY=your_gemini_api_key_here
+```env
+GEMINI_API_KEY_1=your_primary_key
+GEMINI_API_KEY_2=your_second_key   # optional — used on quota errors
+GEMINI_API_KEY_3=your_third_key    # optional — last fallback
 ```
 
-### 3. Install backend dependencies
+### 3. Install backend
 
 ```bash
 pip install -r backend/requirements.txt
 ```
 
-### 4. Install frontend dependencies
+### 4. Install frontend
 
 ```bash
 cd frontend && npm install && cd ..
 ```
 
-### 5. Download and place the dataset
-
-Download from the Kaggle link above and extract to `backend/data/CompanyDocuments/` as shown in the Dataset section.
-
 ---
 
-## Running the Platform
-
-### Option A — Quick start script
-
-```bash
-chmod +x start.sh
-./start.sh
-```
-
-This generates synthetic data (first run only), starts the FastAPI backend on `:8000`, and the Vite frontend on `:5173`.
-
-### Option B — Manual start
+## Running
 
 **Terminal 1 — Backend:**
 ```bash
@@ -120,36 +132,28 @@ uvicorn backend.main:app --reload --port 8000
 cd frontend && npm run dev
 ```
 
-Open **http://localhost:5173** in your browser.
+Open **http://localhost:5173**
 
 ---
 
 ## Loading Documents
 
-### Option A — Bulk ingest the Kaggle dataset
+### Bulk ingest the Kaggle dataset
 
 ```bash
-# Ingest 40 files per category (~200 documents, ~5 minutes)
+# ~200 documents (40 per category, ~5 min)
 python3 scripts/ingest_company_docs.py
 
-# Quick test with fewer files
+# Quick test
 python3 scripts/ingest_company_docs.py --limit 5
 
-# Ingest everything (2,676 files — slow)
+# Everything (2,676 files)
 python3 scripts/ingest_company_docs.py --limit 0
 ```
 
-### Option B — Generate synthetic industrial documents
+### Upload via UI
 
-```bash
-python3 scripts/generate_synthetic_data.py
-```
-
-Generates 27 realistic "Sunrise Refinery" documents (work orders, inspection reports, safety procedures, equipment data sheets, incident reports, operating procedures) and saves them to `backend/data/synthetic/`.
-
-### Option C — Upload via UI
-
-Drag and drop any PDF, TXT, or CSV file onto the **Ingest Documents** panel in the sidebar.
+Drag and drop any PDF, TXT, or CSV onto the **Ingest Documents** panel in the sidebar.
 
 ---
 
@@ -158,15 +162,32 @@ Drag and drop any PDF, TXT, or CSV file onto the **Ingest Documents** panel in t
 | Method | Endpoint | Description |
 |---|---|---|
 | `POST` | `/api/ingest` | Upload and ingest documents |
-| `POST` | `/api/chat/stream` | Streaming chat (SSE) |
+| `POST` | `/api/chat/stream` | Streaming chat via SSE (2-step routed) |
 | `POST` | `/api/chat` | Non-streaming chat |
-| `GET` | `/api/graph` | Full knowledge graph |
+| `GET` | `/api/graph` | Full knowledge graph `{nodes, edges}` |
 | `GET` | `/api/graph/entity/{name}` | Subgraph for a specific entity |
+| `POST` | `/api/graph/rebuild` | Re-extract entities from all docs (SSE progress) |
 | `GET` | `/api/documents` | List all ingested documents |
 | `GET` | `/api/documents/{id}/download` | Download original file |
-| `GET` | `/api/health` | Server health + stats |
+| `GET` | `/api/health` | Server health + chunk/node/edge counts |
 
-Interactive API docs available at **http://localhost:8000/docs**
+Interactive docs: **http://localhost:8000/docs**
+
+---
+
+## Environment Variables
+
+| Variable | Description | Default |
+|---|---|---|
+| `GEMINI_API_KEY_1` | Primary Gemini API key | **required** |
+| `GEMINI_API_KEY_2` | Second key (quota fallback) | optional |
+| `GEMINI_API_KEY_3` | Third key (last fallback) | optional |
+| `CHROMA_PERSIST_DIR` | ChromaDB storage path | `./backend/data/chroma` |
+| `UPLOADS_DIR` | Uploaded files storage | `./backend/data/uploads` |
+| `SYNTHETIC_DATA_DIR` | Synthetic docs path | `./backend/data/synthetic` |
+| `TOP_K_RETRIEVAL` | Default chunks retrieved | `8` |
+| `CHUNK_SIZE` | Tokens per chunk | `800` |
+| `CHUNK_OVERLAP` | Overlap between chunks | `100` |
 
 ---
 
@@ -175,32 +196,36 @@ Interactive API docs available at **http://localhost:8000/docs**
 ```
 CompanyMind/
 ├── backend/
-│   ├── main.py                      # FastAPI app entry point
-│   ├── config.py                    # Settings (loaded from .env)
-│   ├── ingestion/                   # Document parsing, entity extraction, graph building
-│   ├── rag/                         # Vector store, hybrid retriever, Gemini copilot
-│   ├── api/                         # REST endpoints
-│   ├── models/                      # Pydantic schemas
-│   └── data/                        # Runtime data (gitignored)
+│   ├── main.py                     # FastAPI entry point
+│   ├── config.py                   # pydantic-settings config (3-key support)
+│   ├── gemini_keys.py              # Key rotation: call_with_fallback / stream_with_fallback
+│   ├── ingestion/
+│   │   ├── pdf_parser.py           # PyMuPDF text extraction + chunking
+│   │   ├── entity_extractor.py     # Gemini entity extraction (10 types)
+│   │   ├── graph_builder.py        # NetworkX co-occurrence graph
+│   │   └── pipeline.py             # Orchestrates ingest + rebuild
+│   ├── rag/
+│   │   ├── vector_store.py         # ChromaDB CRUD + doc-type filter
+│   │   ├── retriever.py            # Hybrid retrieval + listing query detection
+│   │   └── copilot.py              # Router (needs_rag), direct reply, RAG answer
+│   ├── api/
+│   │   ├── chat.py                 # 2-step SSE stream endpoint
+│   │   ├── ingest.py               # File upload endpoint
+│   │   ├── graph.py                # Graph + rebuild endpoints
+│   │   └── documents.py            # Document list + download
+│   └── models/schemas.py           # Pydantic models
 ├── frontend/
 │   └── src/
-│       ├── App.tsx
-│       ├── components/              # Chat, KnowledgeGraph, DocumentUpload, etc.
-│       └── lib/api.ts               # API client
+│       ├── App.tsx                 # Tab layout (Copilot / Documents)
+│       ├── components/
+│       │   ├── ChatInterface.tsx   # Streaming chat + RAG/Direct badge
+│       │   ├── ConfidenceBadge.tsx # Colour-coded confidence pill
+│       │   ├── SourceCitation.tsx  # Collapsible source cards
+│       │   ├── DocumentUpload.tsx  # Drag-and-drop uploader
+│       │   └── DocumentList.tsx    # Ingested document cards
+│       └── lib/api.ts              # API client + SSE stream parser
 ├── scripts/
-│   ├── generate_synthetic_data.py   # Synthetic industrial document generator
-│   └── ingest_company_docs.py       # Bulk dataset ingestion script
-├── .env.example                     # Environment variable template
-└── start.sh                         # One-command startup script
+│   ├── generate_synthetic_data.py  # Synthetic industrial doc generator
+│   └── ingest_company_docs.py      # Bulk Kaggle dataset ingestion
+└── .env.example
 ```
-
----
-
-## Environment Variables
-
-| Variable | Description | Default |
-|---|---|---|
-| `GEMINI_API_KEY` | Google Gemini API key | **required** |
-| `CHROMA_PERSIST_DIR` | ChromaDB storage path | `./backend/data/chroma` |
-| `UPLOADS_DIR` | Uploaded files storage | `./backend/data/uploads` |
-| `SYNTHETIC_DATA_DIR` | Generated docs path | `./backend/data/synthetic` |
