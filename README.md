@@ -1,21 +1,31 @@
 # CompanyMind — Knowledge Intelligence Platform
 
-An AI-powered platform that ingests heterogeneous business and industrial documents and makes their collective intelligence queryable through a conversational copilot with source citations and confidence scoring.
+CompanyMind is an AI-powered copilot designed to break down information silos in business and industrial workflows. By ingesting unstructured documents across multiple formats, it converts raw file repositories into an interactive knowledge base—giving teams fast, cited, and confidence-scored answers to their operational questions.
 
-Built for the **Unstop Hackathon — Theme 8: AI for Industrial Knowledge Intelligence**.
+Built for the **Unstop Hackathon — Theme 8: AI for Industrial Knowledge Intelligence.**
 
 ---
 
 ## Features
 
-- **2-Step RAG Routing** — Before every query the agent decides whether knowledge-base retrieval is needed. Greetings and general questions get a direct conversational reply; document queries trigger full hybrid retrieval. Each response is labelled **"KB searched"** or **"Direct reply"**.
-- **Hybrid RAG Retrieval** — Vector similarity search (ChromaDB) combined with knowledge-graph neighbour expansion (NetworkX) for richer, cross-document answers.
-- **Smart Listing Query Detection** — Queries containing `list / all / highest / maximum / cheapest` etc. bypass the default top-8 limit and retrieve all documents of the matched type (up to 50), enabling complete answers like "list all invoices".
-- **Streaming AI Chat** — Token-by-token SSE streaming with confidence badge and collapsible source citations on every RAG answer.
-- **3-Key Gemini Failover** — Automatically rotates through up to three API keys on 429/quota errors. Streaming rotation only triggers before the first token so partial responses are never corrupted.
-- **Universal Document Ingestion** — Upload PDFs, TXT, CSV, or Markdown. Doc type is inferred from the filename (Invoice, Work Order, Inventory Report, Purchase Order, etc.).
-- **Entity Extraction** — 10 entity types extracted by Gemini at ingest time: `EQUIPMENT_TAG`, `PERSON`, `DATE`, `REGULATION`, `PARAMETER`, `LOCATION`, `FAILURE_MODE`, `ORDER_ID`, `PRODUCT`, `ORGANISATION`.
-- **Mobile-responsive UI** — Desktop sidebar + mobile bottom-nav, built with React 18 + Tailwind CSS.
+-**Smart 2-Step RAG Routing**
+Not every message needs a database lookup. CompanyMind checks query intent first—casual greetings get an instant conversational reply, while document-related questions trigger full knowledge-base retrieval. Every response clearly indicates whether it was a **"Direct reply"** or **"KB searched"**.
+
+-**Hybrid Retrieval (Vectors + Knowledge Graph)**
+Rather than relying purely on vector embeddings, we combine semantic search in ChromaDB with graph-neighbor expansion in NetworkX. This lets the agent draw connections across multiple related documents for far richer answers.
+
+-**Broad Listing & Aggregation Detection** 
+Standard RAG systems often miss the bigger picture because of tight top-$k$ limits. CompanyMind automatically detects intent keywords (like list, all, highest, cheapest) and expands the retrieval window up to 50 matched items—making queries like "list all invoices" actually work.
+
+-**Streaming AI Chat** — Token-by-token SSE streaming with confidence badge and collapsible source citations on every RAG answer.
+  
+-**3-Key Gemini Failover** — Automatically rotates through up to three API keys on 429/quota errors. Streaming rotation only triggers before the first token so partial responses are never corrupted.
+  
+-**Universal Document Ingestion** — Upload PDFs, TXT, CSV, or Markdown. Doc type is inferred from the filename (Invoice, Work Order, Inventory Report, Purchase Order, etc.).
+  
+-**Entity Extraction** — 10 entity types extracted by Gemini at ingest time: `EQUIPMENT_TAG`, `PERSON`, `DATE`, `REGULATION`, `PARAMETER`, `LOCATION`, `FAILURE_MODE`, `ORDER_ID`, `PRODUCT`, `ORGANISATION`.
+  
+-**Mobile-responsive UI** — Desktop sidebar + mobile bottom-nav, built with React 18 + Tailwind CSS.
 
 ---
 
